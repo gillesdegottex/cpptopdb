@@ -64,7 +64,7 @@ namespace cpptopdb {
             type = "float64";
         } else {
             type = "unknown";
-            std::cerr << "cpptopdb: Warning: unknown value_type for variable '" << varname << "' of type " << std::type_index(typeid(typename array_type::value_type)).name() << std::endl;
+            // std::cerr << "cpptopdb: Warning: unknown value_type for variable '" << varname << "' of type " << std::type_index(typeid(typename array_type::value_type)).name() << std::endl;
         }
         g_cpptopdb_names2types.insert(make_pair(varname, type));
         update();

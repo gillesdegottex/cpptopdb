@@ -34,3 +34,12 @@ def pull():
         if "dtype" in var:
             dtype = np.dtype(var["dtype"])
         load(var["varname"], dtype=dtype)
+
+def list():
+    print("cpptopdb: Current variables:")
+    pull()
+    with open(f"./cpptopdb/cpptopdb.json") as f:
+        data = json.load(f)
+    for var in data["variables"]:
+        varname = var["varname"]
+        print(f'cpptopdb:     {varname}: {globals()[varname].shape} [{var["dtype"]}]')
