@@ -21,8 +21,11 @@ def cont():
     # Then 'continue' in the debugger
 
 
-def load(varname, dtype=np.float32):
-    globals()[varname] = np.fromfile(f"./cpptopdb/{varname}.bin", dtype=dtype)
+def load(varname, array, dtype=np.float32):
+    X = np.fromfile(f"./cpptopdb/{varname}.bin", dtype=dtype)
+    if not array:
+        X = X[0]
+    globals()[varname] = X
 
 def pull():
     print("cpptopdb: Loading data from C++ side...")
@@ -31,9 +34,15 @@ def pull():
     for var in data["variables"]:
         # TODO Load only if it has been changed
         dtype = np.float32
+        array = True
         if "dtype" in var:
-            dtype = np.dtype(var["dtype"])
-        load(var["varname"], dtype=dtype)
+            if var["dtype"].startswith("array_"):
+                array = True
+                dtype = np.dtype(var["dtype"].replace("array_", ""))
+            else:
+                array = False
+                dtype = np.dtype(var["dtype"])
+        load(var["varname"], array=array, dtype=dtype)
 
 def list():
     print("cpptopdb: Current variables:")
@@ -42,4 +51,7 @@ def list():
         data = json.load(f)
     for var in data["variables"]:
         varname = var["varname"]
-        print(f'cpptopdb:     {varname}: {globals()[varname].shape} [{var["dtype"]}]')
+        if var["dtype"].startswith("array_"):
+            print(f'cpptopdb:     {varname}: {globals()[varname].shape} [{var["dtype"]}]')
+        else:
+            print(f'cpptopdb:     {varname}: {globals()[varname]} [{var["dtype"]}]')

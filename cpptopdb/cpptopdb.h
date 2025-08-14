@@ -44,6 +44,36 @@ namespace cpptopdb {
         outfile << "}" << std::endl;
     }
 
+    inline void add(int value, const std::string& varname) {
+        std::lock_guard<std::mutex> guard(g_cpptopdb_access);
+        if (!fs::is_directory("cpptopdb") || !fs::exists("cpptopdb")) {
+            fs::create_directory("cpptopdb");
+        }
+        std::string filepath = "./cpptopdb/"+varname+".bin";
+
+        std::ofstream outfile(filepath, std::ios::out | std::ios::binary);
+        assert(outfile.is_open());
+        outfile.write(reinterpret_cast<char*>(&value), sizeof(int));
+        outfile.close();
+
+        g_cpptopdb_names2types.insert(make_pair(varname, "int32"));
+        update();
+    }
+    inline void add(float value, const std::string& varname) {
+        std::lock_guard<std::mutex> guard(g_cpptopdb_access);
+        if (!fs::is_directory("cpptopdb") || !fs::exists("cpptopdb")) {
+            fs::create_directory("cpptopdb");
+        }
+        std::string filepath = "./cpptopdb/"+varname+".bin";
+
+        std::ofstream outfile(filepath, std::ios::out | std::ios::binary);
+        assert(outfile.is_open());
+        outfile.write(reinterpret_cast<char*>(&value), sizeof(float));
+        outfile.close();
+
+        g_cpptopdb_names2types.insert(make_pair(varname, "float32"));
+        update();
+    }
     // Matches any container array_type that has a value_type member
     template<typename array_type>
     inline void add(const array_type& var, const std::string& varname) {
@@ -55,13 +85,15 @@ namespace cpptopdb {
 
         std::string type;
         if (std::is_same<typename array_type::value_type, std::complex<float>>::value) {
-            type = "complex64";
+            type = "array_complex64";
         } else if (std::is_same<typename array_type::value_type, std::complex<double>>::value) {
-            type = "complex128";
+            type = "array_complex128";
         } else if (std::is_same<typename array_type::value_type, float>::value) {
-            type = "float32";
+            type = "array_float32";
         } else if (std::is_same<typename array_type::value_type, double>::value) {
-            type = "float64";
+            type = "array_float64";
+        } else if (std::is_same<typename array_type::value_type, int>::value) {
+            type = "array_int32";
         } else {
             type = "unknown";
             // std::cerr << "cpptopdb: Warning: unknown value_type for variable '" << varname << "' of type " << std::type_index(typeid(typename array_type::value_type)).name() << std::endl;
