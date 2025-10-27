@@ -15,15 +15,20 @@
 #include <filesystem>
 namespace fs = std::filesystem;
 
-#define CPPTOPDB_CPP std::map<std::string,std::string> g_cpptopdb_names2types; std::mutex g_cpptopdb_access;
-extern std::map<std::string,std::string> g_cpptopdb_names2types;
-extern std::mutex g_cpptopdb_access;
-
 namespace cpptopdb {
 
+    inline std::map<std::string,std::string>& names2types() {
+        static std::map<std::string,std::string> s_names2types;
+        return s_names2types;
+    }
+    inline std::mutex& access() {
+        static std::mutex s_access;
+        return s_access;
+    }
+    
     inline void clear() {
-        std::lock_guard<std::mutex> guard(g_cpptopdb_access);
-        g_cpptopdb_names2types.clear();
+        std::lock_guard<std::mutex> guard(access());
+        names2types().clear();
     }
 
     inline void update() {
@@ -34,7 +39,7 @@ namespace cpptopdb {
         outfile << "{";
         outfile << "\"variables\":[";
         int n = 0;
-        for (const auto& kv : g_cpptopdb_names2types) {
+        for (const auto& kv : names2types()) {
             if (n > 0)
                 outfile << ",";
             outfile << "{\"varname\":\"" << kv.first << "\",\"dtype\":\"" << kv.second << "\"}";
@@ -45,7 +50,7 @@ namespace cpptopdb {
     }
 
     inline void add(int value, const std::string& varname) {
-        std::lock_guard<std::mutex> guard(g_cpptopdb_access);
+        std::lock_guard<std::mutex> guard(access());
         if (!fs::is_directory("cpptopdb") || !fs::exists("cpptopdb")) {
             fs::create_directory("cpptopdb");
         }
@@ -56,11 +61,11 @@ namespace cpptopdb {
         outfile.write(reinterpret_cast<char*>(&value), sizeof(int));
         outfile.close();
 
-        g_cpptopdb_names2types.insert(make_pair(varname, "int32"));
+        names2types().insert(make_pair(varname, "int32"));
         update();
     }
     inline void add(float value, const std::string& varname) {
-        std::lock_guard<std::mutex> guard(g_cpptopdb_access);
+        std::lock_guard<std::mutex> guard(access());
         if (!fs::is_directory("cpptopdb") || !fs::exists("cpptopdb")) {
             fs::create_directory("cpptopdb");
         }
@@ -71,13 +76,13 @@ namespace cpptopdb {
         outfile.write(reinterpret_cast<char*>(&value), sizeof(float));
         outfile.close();
 
-        g_cpptopdb_names2types.insert(make_pair(varname, "float32"));
+        names2types().insert(make_pair(varname, "float32"));
         update();
     }
     // Matches any container array_type that has a value_type member
     template<typename array_type>
     inline void add(const array_type& var, const std::string& varname) {
-        std::lock_guard<std::mutex> guard(g_cpptopdb_access);
+        std::lock_guard<std::mutex> guard(access());
         if (!fs::is_directory("cpptopdb") || !fs::exists("cpptopdb")) {
             fs::create_directory("cpptopdb");
         }
@@ -98,14 +103,14 @@ namespace cpptopdb {
             type = "unknown";
             // std::cerr << "cpptopdb: Warning: unknown value_type for variable '" << varname << "' of type " << std::type_index(typeid(typename array_type::value_type)).name() << std::endl;
         }
-        g_cpptopdb_names2types.insert(make_pair(varname, type));
+        names2types().insert(make_pair(varname, type));
         update();
     }
 
     inline void print() {
-        std::lock_guard<std::mutex> guard(g_cpptopdb_access);
+        std::lock_guard<std::mutex> guard(access());
         std::cerr << "cpptopdb: variables:" << std::endl;
-        for (const auto& kv : g_cpptopdb_names2types) {
+        for (const auto& kv : names2types()) {
             std::cerr << "    " << kv.first << " [" << kv.second << "]" << std::endl;
         }
     }
